@@ -37,16 +37,14 @@ const setCookies = (res, accessToken, refreshToken) => {
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, college } = req.body;
 
-  // Check if user already exists
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     return res.status(400).json({
       success: false,
-      message: "User with this email already exists",
+      message: "User already exists",
     });
   }
 
-  // Create user
   const user = await User.create({
     name,
     email,
@@ -54,29 +52,25 @@ export const registerUser = asyncHandler(async (req, res) => {
     college,
   });
 
-  // Generate tokens
-  const { accessToken, refreshToken } = await generateTokens(user._id);
+  const { accessToken } = await generateTokens(user._id);
 
-  // Get user without password
-  const createdUser = await User.findById(user._id).select("-password -refreshToken");
-
-  // Set cookies
-  setCookies(res, accessToken, refreshToken);
+  const safeUser = await User.findById(user._id).select("-password -refreshToken");
 
   res.status(201).json({
     success: true,
     message: "User registered successfully",
+    token: accessToken,
     data: {
-      user: createdUser,
+      user: safeUser,
     },
   });
 });
+
 
 // Login user
 export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  // Find user and include password for verification
   const user = await User.findOne({ email }).select("+password");
   if (!user) {
     return res.status(401).json({
@@ -85,7 +79,6 @@ export const loginUser = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check password
   const isPasswordValid = await user.isPasswordCorrect(password);
   if (!isPasswordValid) {
     return res.status(401).json({
@@ -94,23 +87,22 @@ export const loginUser = asyncHandler(async (req, res) => {
     });
   }
 
-  // Generate tokens
   const { accessToken, refreshToken } = await generateTokens(user._id);
 
-  // Get user without password
-  const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
-
-  // Set cookies
   setCookies(res, accessToken, refreshToken);
+
+  const safeUser = await User.findById(user._id).select("-password -refreshToken");
 
   res.status(200).json({
     success: true,
     message: "Login successful",
+    token: accessToken,
     data: {
-      user: loggedInUser,
+      user: safeUser,
     },
   });
 });
+
 
 // Logout user
 export const logoutUser = asyncHandler(async (req, res) => {
@@ -191,6 +183,7 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
     },
   });
 });
+
 
 // Update user profile
 export const updateUserProfile = asyncHandler(async (req, res) => {

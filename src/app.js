@@ -17,10 +17,10 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin: ["http://localhost:5173", "http://localhost:5174"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 // Logging middleware
@@ -45,7 +45,7 @@ app.get("/health", (req, res) => {
 });
 
 // API routes
-app.use("/api/users", userRouter);
+app.use("/api/auth", userRouter);
 app.use("/api/items", itemRouter);
 app.use("/api/upload", uploadRouter);
 
