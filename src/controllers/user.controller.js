@@ -132,7 +132,8 @@ export const logoutUser = asyncHandler(async (req, res) => {
 
 // Refresh access token
 export const refreshAccessToken = asyncHandler(async (req, res) => {
-  const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+  const incomingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken;
 
   if (!incomingRefreshToken) {
     return res.status(401).json({
@@ -142,11 +143,12 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 
   try {
-    // Verify refresh token
-    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const decoded = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
 
-    // Find user
-    const user = await User.findById(decodedToken.id);
+    const user = await User.findById(decoded.id);
     if (!user || user.refreshToken !== incomingRefreshToken) {
       return res.status(401).json({
         success: false,
@@ -154,23 +156,25 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
       });
     }
 
-    // Generate new tokens
-    const { accessToken, newRefreshToken } = await generateTokens(user._id);
+    const { accessToken, refreshToken } = await generateTokens(user._id);
 
-    // Set cookies
-    setCookies(res, accessToken, newRefreshToken);
+    setCookies(res, accessToken, refreshToken);
 
     res.status(200).json({
       success: true,
-      message: "Token refreshed successfully",
+      data: { accessToken },
     });
   } catch (error) {
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+
     return res.status(401).json({
       success: false,
-      message: "Invalid refresh token",
+      message: "Invalid or expired refresh token",
     });
   }
 });
+
 
 // Get current user profile
 export const getCurrentUser = asyncHandler(async (req, res) => {

@@ -8,15 +8,26 @@ const router = Router();
 
 // Upload images to Cloudinary
 router.post("/images", verifyJWT, uploadMultiple("images", 5), asyncHandler(async (req, res) => {
+  console.log("MULTER TEST:", {
+  hasFiles: !!req.files,
+  buffer: req.files?.[0]?.buffer,
+  path: req.files?.[0]?.path,
+});
+
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({
       success: false,
       message: "No files uploaded",
     });
   }
+console.log("FILE KEYS:", Object.keys(req.files[0]));
+console.log("BUFFER EXISTS:", !!req.files[0].buffer);
 
   try {
-    const uploadPromises = req.files.map(file => uploadToCloudinary(file.path));
+    const uploadPromises = req.files.map(file =>
+  uploadToCloudinary(file.buffer)
+);
+
     const uploadResults = await Promise.all(uploadPromises);
 
     // Filter out failed uploads

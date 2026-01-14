@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 
@@ -7,45 +9,24 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+console.log("CLOUDINARY ENV CHECK:", {
+  name: process.env.CLOUDINARY_CLOUD_NAME,
+  key: process.env.CLOUDINARY_API_KEY,
+  secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // Upload file to Cloudinary
-export const uploadToCloudinary = async (localFilePath, folder = "campus-marketplace") => {
-  try {
-    if (!localFilePath) return null;
-
-    // Upload the file to Cloudinary
-    const response = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: "auto",
-      folder: folder,
-      // Apply transformations for better performance
-      transformation: [
-        { width: 800, height: 800, crop: "limit" },
-        { quality: "auto" },
-        { fetch_format: "auto" }
-      ]
-    });
-
-    // File has been uploaded successfully
-    console.log("File uploaded to Cloudinary:", response.url);
-
-    // Remove the locally saved temporary file
-    if (fs.existsSync(localFilePath)) {
-      fs.unlinkSync(localFilePath);
-    }
-
-    return response;
-  } catch (error) {
-    console.error("Cloudinary upload error:", error);
-
-    // Remove the locally saved temporary file if upload failed
-    if (fs.existsSync(localFilePath)) {
-      fs.unlinkSync(localFilePath);
-    }
-
-    return null;
-  }
+export const uploadToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      { folder: "campus-market" },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    ).end(buffer);
+  });
 };
-
 // Delete file from Cloudinary
 export const deleteFromCloudinary = async (publicId) => {
   try {
