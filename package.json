@@ -23,8 +23,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/index.js"
-  },
+  "start": "node src/index.js",
+  "dev": "nodemon src/index.js"
+}
+,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/prachimulay17/campus-marketplace-backend.git"

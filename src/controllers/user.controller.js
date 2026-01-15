@@ -22,11 +22,12 @@ const generateTokens = async (userId) => {
 
 // Set secure cookies
 const setCookies = (res, accessToken, refreshToken) => {
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-  };
+ const options = {
+  httpOnly: true,
+  secure: true,        // REQUIRED for HTTPS
+  sameSite: "none",    // REQUIRED for cross-domain
+};
+
 
   res
     .cookie("accessToken", accessToken, { ...options, maxAge: 15 * 60 * 1000 }) // 15 minutes
@@ -114,11 +115,12 @@ export const logoutUser = asyncHandler(async (req, res) => {
   );
 
   // Clear cookies
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-  };
+ const options = {
+  httpOnly: true,
+  secure: true,        // REQUIRED for HTTPS
+  sameSite: "none",    // REQUIRED for cross-domain
+};
+
 
   res
     .clearCookie("accessToken", options)
