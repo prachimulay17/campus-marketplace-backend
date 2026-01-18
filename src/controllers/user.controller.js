@@ -39,13 +39,23 @@ const setCookies = (res, accessToken, refreshToken) => {
 };
 
 // Register user
-export const registerUser = async (req, res) => {
+export const register = async (req, res) => {
   try {
+    console.log("REGISTER BODY:", req.body); // 👈 DEBUG LINE
+
     const { name, email, password, college } = req.body;
 
+    if (!college) {
+      return res.status(400).json({
+        success: false,
+        message: "College is required"
+      });
+    }
+
     const existingUser = await User.findOne({ email });
-    if (existingUser)
+    if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -61,7 +71,7 @@ export const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      college, // ✅ REQUIRED FIELD
+      college, // ✅ MUST BE PRESENT
       otp: hashedOtp,
       otpExpires: Date.now() + 5 * 60 * 1000
     });
@@ -74,13 +84,18 @@ export const registerUser = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "OTP sent to email. Please verify.",
-      data: { email: user.email }
+      message: "OTP sent to email. Please verify."
     });
+
   } catch (error) {
-    res.status(500).json({ message: "Registration failed", error });
+    console.error("REGISTER ERROR:", error); // 👈 LOG REAL ERROR
+    res.status(500).json({
+      message: "Registration failed",
+      error
+    });
   }
 };
+
 
 
 // Login user
