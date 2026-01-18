@@ -1,6 +1,10 @@
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 import { asyncHandler } from "../middlewares/error.middleware.js";
+import bcrypt from "bcrypt";
+import otpGenerator from "otp-generator";
+import { sendEmail } from "../utils/sendEmail.js";
+
 
 // Generate access and refresh tokens
 const generateTokens = async (userId) => {
@@ -258,32 +262,33 @@ export const changePassword = asyncHandler(async (req, res) => {
   });
 });
 
-export const verifyOtp = async (req, res) => {
-  try {
-    const { email, otp } = req.body;
+export const verifyOtp = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+  const user = await User.findOne({ email });
+  if (!user)
+    return res.status(404).json({ message: "User not found" });
 
-    if (user.isVerified)
-      return res.status(400).json({ message: "User already verified" });
+  if (user.isEmailVerified)
+    return res.status(400).json({ message: "Email already verified" });
 
-    if (user.otpExpires < Date.now())
-      return res.status(400).json({ message: "OTP expired" });
+  if (user.otpExpires < Date.now())
+    return res.status(400).json({ message: "OTP expired" });
 
-    const isMatch = await bcrypt.compare(otp, user.otp);
-    if (!isMatch)
-      return res.status(400).json({ message: "Invalid OTP" });
+  const isValidOtp = await bcrypt.compare(otp, user.otp);
+  if (!isValidOtp)
+    return res.status(400).json({ message: "Invalid OTP" });
 
-    user.isVerified = true;
-    user.otp = null;
-    user.otpExpires = null;
-    await user.save();
+  user.isEmailVerified = true;
+  user.otp = null;
+  user.otpExpires = null;
+  await user.save();
 
-    res.json({ message: "Email verified successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "OTP verification failed" });
-  }
-};
+  res.status(200).json({
+    success: true,
+    message: "Email verified successfully"
+  });
+});
+
+
 
