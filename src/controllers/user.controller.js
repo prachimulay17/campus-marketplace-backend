@@ -41,7 +41,7 @@ const setCookies = (res, accessToken, refreshToken) => {
 // Register user
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, college } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser)
@@ -61,8 +61,9 @@ export const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      college, // ✅ REQUIRED FIELD
       otp: hashedOtp,
-      otpExpires: Date.now() + 5 * 60 * 1000 // 5 minutes
+      otpExpires: Date.now() + 5 * 60 * 1000
     });
 
     await sendEmail(
@@ -72,8 +73,9 @@ export const registerUser = async (req, res) => {
     );
 
     res.status(201).json({
+      success: true,
       message: "OTP sent to email. Please verify.",
-      email: user.email
+      data: { email: user.email }
     });
   } catch (error) {
     res.status(500).json({ message: "Registration failed", error });
