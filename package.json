@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.0",
     "cookie-parser": "^1.4.7",
@@ -13,7 +14,8 @@
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
-    "nodemailer": "^7.0.12"
+    "nodemailer": "^7.0.12",
+    "otp-generator": "^4.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
@@ -23,10 +25,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "start": "node src/index.js",
-  "dev": "nodemon src/index.js"
-}
-,
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/prachimulay17/campus-marketplace-backend.git"

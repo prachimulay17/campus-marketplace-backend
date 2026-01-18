@@ -35,37 +35,46 @@ const setCookies = (res, accessToken, refreshToken) => {
 };
 
 // Register user
-export const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, college } = req.body;
+export const register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
 
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return res.status(400).json({
-      success: false,
-      message: "User already exists",
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ message: "User already exists" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const otp = otpGenerator.generate(6, {
+      digits: true,
+      upperCase: false,
+      specialChars: false
     });
+
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      otp: hashedOtp,
+      otpExpires: Date.now() + 5 * 60 * 1000 // 5 minutes
+    });
+
+    await sendEmail(
+      email,
+      "Campus Market Email Verification",
+      `<h2>Your OTP is ${otp}</h2><p>Valid for 5 minutes</p>`
+    );
+
+    res.status(201).json({
+      message: "OTP sent to email. Please verify.",
+      email: user.email
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Registration failed", error });
   }
-
-  const user = await User.create({
-    name,
-    email,
-    password,
-    college,
-  });
-
-  const { accessToken } = await generateTokens(user._id);
-
-  const safeUser = await User.findById(user._id).select("-password -refreshToken");
-
-  res.status(201).json({
-    success: true,
-    message: "User registered successfully",
-    token: accessToken,
-    data: {
-      user: safeUser,
-    },
-  });
-});
+};
 
 
 // Login user
@@ -73,6 +82,12 @@ export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email }).select("+password");
+  if (!user.isVerified) {
+  return res.status(401).json({
+    message: "Please verify your email first"
+  });
+}
+
   if (!user) {
     return res.status(401).json({
       success: false,
@@ -243,4 +258,32 @@ export const changePassword = asyncHandler(async (req, res) => {
   });
 });
 
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user)
+      return res.status(404).json({ message: "User not found" });
+
+    if (user.isVerified)
+      return res.status(400).json({ message: "User already verified" });
+
+    if (user.otpExpires < Date.now())
+      return res.status(400).json({ message: "OTP expired" });
+
+    const isMatch = await bcrypt.compare(otp, user.otp);
+    if (!isMatch)
+      return res.status(400).json({ message: "Invalid OTP" });
+
+    user.isVerified = true;
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save();
+
+    res.json({ message: "Email verified successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "OTP verification failed" });
+  }
+};
 
