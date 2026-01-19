@@ -39,7 +39,7 @@ const setCookies = (res, accessToken, refreshToken) => {
 };
 
 // Register user
-export const register = async (req, res) => {
+export const registerUser = async (req, res) => {
   try {
     console.log("REGISTER BODY:", req.body); // 👈 DEBUG LINE
 
