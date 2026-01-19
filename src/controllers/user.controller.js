@@ -67,25 +67,33 @@ export const registerUser = async (req, res) => {
 
     const hashedOtp = await bcrypt.hash(otp, 10);
 
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      college, // ✅ MUST BE PRESENT
-      otp: hashedOtp,
-      otpExpires: Date.now() + 5 * 60 * 1000
-    });
+   const user = await User.create({
+  name,
+  email,
+  password: hashedPassword,
+  college,
+  otp: hashedOtp,
+  otpExpires: Date.now() + 5 * 60 * 1000
+});
 
-    await sendEmail(
-      email,
-      "Campus Market Email Verification",
-      `<h2>Your OTP is ${otp}</h2><p>Valid for 5 minutes</p>`
-    );
+try {
+  await sendEmail(
+    email,
+    "Campus Market Email Verification",
+    `<h2>Your OTP is ${otp}</h2><p>Valid for 5 minutes</p>`
+  );
+} catch (err) {
+  await User.findByIdAndDelete(user._id); // rollback user
+  return res.status(500).json({
+    message: "Email sending failed. Try again."
+  });
+}
 
-    res.status(201).json({
-      success: true,
-      message: "OTP sent to email. Please verify."
-    });
+res.status(201).json({
+  success: true,
+  message: "OTP sent to email. Please verify."
+});
+
 
   } catch (error) {
     console.error("REGISTER ERROR:", error); // 👈 LOG REAL ERROR
