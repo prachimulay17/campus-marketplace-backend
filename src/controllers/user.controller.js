@@ -104,12 +104,19 @@ export const registerUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
-    res.status(500).json({
-      success: false,
-      message: "Registration failed",
-    });
-  }
+  console.error("REGISTER ERROR FULL:", {
+    message: error.message,
+    response: error.response?.body || error.response,
+    stack: error.stack,
+  });
+
+  res.status(500).json({
+    success: false,
+    message: "Registration failed",
+    error: error.response?.body || error.message,
+  });
+}
+
 };
 
 
