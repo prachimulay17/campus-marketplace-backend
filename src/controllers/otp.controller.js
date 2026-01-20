@@ -30,7 +30,8 @@ export const sendOtp = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
-
+console.log("ENTERED OTP:", otp);
+console.log("HASHED OTP:", user.otp);
   const record = await Otp.findOne({ email, otp });
 
   if (!record)
