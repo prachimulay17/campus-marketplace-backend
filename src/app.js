@@ -9,6 +9,7 @@ import cookieParser from "cookie-parser";
 import userRouter from "./routes/user.route.js";
 import itemRouter from "./routes/item.route.js";
 import uploadRouter from "./routes/upload.route.js";
+import otpRoutes from "./routes/otp.route.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
@@ -52,6 +53,8 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", userRouter);
 app.use("/api/items", itemRouter);
 app.use("/api/upload", uploadRouter);
+app.use("/api/otp", otpRoutes);
+
 
 // 404 handler for undefined routes
 app.use("*", (req, res) => {

@@ -3,7 +3,10 @@ import { User } from "../models/user.model.js";
 import { asyncHandler } from "../middlewares/error.middleware.js";
 import bcrypt from "bcrypt";
 import otpGenerator from "otp-generator";
-import { sendEmail } from "../utils/sendEmail.js";
+import apiInstance from "../config/brevo.js";
+
+
+
 
 
 // Generate access and refresh tokens
@@ -41,68 +44,74 @@ const setCookies = (res, accessToken, refreshToken) => {
 // Register user
 export const registerUser = async (req, res) => {
   try {
-    console.log("REGISTER BODY:", req.body); // 👈 DEBUG LINE
-
     const { name, email, password, college } = req.body;
 
-    if (!college) {
+    if (!name || !email || !password || !college) {
       return res.status(400).json({
         success: false,
-        message: "College is required"
+        message: "All fields are required",
       });
     }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({
+        success: false,
+        message: "User already exists",
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Generate OTP
     const otp = otpGenerator.generate(6, {
       digits: true,
       upperCase: false,
-      specialChars: false
+      specialChars: false,
     });
 
     const hashedOtp = await bcrypt.hash(otp, 10);
 
-   const user = await User.create({
-  name,
-  email,
-  password: hashedPassword,
-  college,
-  otp: hashedOtp,
-  otpExpires: Date.now() + 5 * 60 * 1000
-});
+    // Create user (unverified)
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      college,
+      otp: hashedOtp,
+      otpExpires: Date.now() + 5 * 60 * 1000,
+      isVerified: false,
+    });
 
-try {
-  await sendEmail(
-    email,
-    "Campus Market Email Verification",
-    `<h2>Your OTP is ${otp}</h2><p>Valid for 5 minutes</p>`
-  );
-} catch (err) {
-  await User.findByIdAndDelete(user._id); // rollback user
-  return res.status(500).json({
-    message: "Email sending failed. Try again."
-  });
-}
+    // ✅ SEND OTP USING BREVO TEMPLATE
+    const sendSmtpEmail = {
+      to: [{ email }],
+      templateId: 7, // 👈 YOUR TEMPLATE ID
+      params: {
+        otp: otp,
+      },
+      sender: {
+        email: "prachimulay2@gmail.com", // verified sender
+        name: "Campus Market",
+      },
+    };
 
-res.status(201).json({
-  success: true,
-  message: "OTP sent to email. Please verify."
-});
+    await apiInstance.sendTransacEmail(sendSmtpEmail);
 
+    res.status(201).json({
+      success: true,
+      message: "OTP sent to email. Please verify.",
+    });
 
   } catch (error) {
-    console.error("REGISTER ERROR:", error); // 👈 LOG REAL ERROR
+    console.error("REGISTER ERROR:", error);
     res.status(500).json({
+      success: false,
       message: "Registration failed",
-      error
     });
   }
 };
+
 
 
 
@@ -287,33 +296,7 @@ export const changePassword = asyncHandler(async (req, res) => {
   });
 });
 
-export const verifyOtp = asyncHandler(async (req, res) => {
-  const { email, otp } = req.body;
 
-  const user = await User.findOne({ email });
-  if (!user)
-    return res.status(404).json({ message: "User not found" });
-
-  if (user.isEmailVerified)
-    return res.status(400).json({ message: "Email already verified" });
-
-  if (user.otpExpires < Date.now())
-    return res.status(400).json({ message: "OTP expired" });
-
-  const isValidOtp = await bcrypt.compare(otp, user.otp);
-  if (!isValidOtp)
-    return res.status(400).json({ message: "Invalid OTP" });
-
-  user.isEmailVerified = true;
-  user.otp = null;
-  user.otpExpires = null;
-  await user.save();
-
-  res.status(200).json({
-    success: true,
-    message: "Email verified successfully"
-  });
-});
 
 
 
