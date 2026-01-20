@@ -9,7 +9,7 @@ export const sendOtpEmail = async (email, otp) => {
         otp: otp,
       },
       sender: {
-        email: "prachimulay2@gmail.com", // 👈 verified sender
+        email: "campusmarketplace11@gmail.com", // 👈 verified sender
         name: "Campus Market",
       },
     };
