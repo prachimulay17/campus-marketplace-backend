@@ -86,7 +86,7 @@ export const registerUser = async (req, res) => {
     // ✅ SEND OTP USING BREVO TEMPLATE
     const sendSmtpEmail = {
       to: [{ email }],
-      templateId: 7, // 👈 YOUR TEMPLATE ID
+      templateId: 3, // 👈 YOUR TEMPLATE ID
       params: {
         otp: otp,
       },
