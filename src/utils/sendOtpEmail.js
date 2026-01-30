@@ -14,7 +14,9 @@ export const sendOtpEmail = async (email, otp) => {
       },
     };
 
-    await apiInstance.sendTransacEmail(sendSmtpEmail);
+    const res = await apiInstance.sendTransacEmail(sendSmtpEmail);
+console.log("Brevo response:", res);
+
   } catch (error) {
     console.error("Brevo error:", error);
     throw error;
