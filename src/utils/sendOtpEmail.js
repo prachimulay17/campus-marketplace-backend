@@ -4,7 +4,7 @@ export const sendOtpEmail = async (email, otp) => {
   try {
     const sendSmtpEmail = {
       to: [{ email }],
-      templateId: 7, // 👈 PUT YOUR TEMPLATE ID HERE
+      templateId: 4, // 👈 PUT YOUR TEMPLATE ID HERE
       params: {
         otp: otp,
       },
