@@ -80,7 +80,7 @@ export const registerUser = async (req, res) => {
       college,
       otp: hashedOtp,
       otpExpires: Date.now() + 5 * 60 * 1000,
-      isVerified: false,
+      isVerified: true,
     });
 
     // ✅ SEND OTP USING BREVO TEMPLATE
