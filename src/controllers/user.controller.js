@@ -2,8 +2,6 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 import { asyncHandler } from "../middlewares/error.middleware.js";
 import bcrypt from "bcrypt";
-import otpGenerator from "otp-generator";
-import apiInstance from "../config/brevo.js";
 
 
 
@@ -41,7 +39,7 @@ const setCookies = (res, accessToken, refreshToken) => {
     .cookie("refreshToken", refreshToken, { ...options, maxAge: 7 * 24 * 60 * 60 * 1000 }); // 7 days
 };
 
-// Register user
+// Register user (called after OTP verification)
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password, college } = req.body;
@@ -53,70 +51,53 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create verified user (OTP already verified)
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      college,
+      isVerified: true,
+    });
+
+    // Generate tokens
+    const { accessToken, refreshToken } = await generateTokens(user._id);
+
+    // Set cookies
+    setCookies(res, accessToken, refreshToken);
+
+    // Return safe user data
+    const safeUser = await User.findById(user._id).select("-password -refreshToken");
+
+    res.status(201).json({
+      success: true,
+      message: "Registration successful",
+      token: accessToken,
+      data: {
+        user: safeUser,
+      },
+    });
+
+  } catch (error) {
+    console.error("REGISTER ERROR:", error.message);
+
+    // Handle duplicate key error
+    if (error.code === 11000) {
       return res.status(400).json({
         success: false,
         message: "User already exists",
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Generate OTP
-    const otp = otpGenerator.generate(6, {
-      digits: true,
-      upperCase: false,
-      specialChars: false,
+    res.status(500).json({
+      success: false,
+      message: "Registration failed",
+      error: error.message,
     });
-
-    const hashedOtp = await bcrypt.hash(otp, 10);
-
-    // Create user (unverified)
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      college,
-      otp: hashedOtp,
-      otpExpires: Date.now() + 5 * 60 * 1000,
-      isVerified: true,
-    });
-
-    // ✅ SEND OTP USING BREVO TEMPLATE
-    const sendSmtpEmail = {
-      to: [{ email }],
-      templateId: 4, // 👈 YOUR TEMPLATE ID
-      params: {
-        otp: otp,
-      },
-      sender: {
-        email: "campusmarketplace11@gmail.com", // verified sender
-        name: "Campus Market",
-      },
-    };
-
-    await apiInstance.sendTransacEmail(sendSmtpEmail);
-
-    res.status(201).json({
-      success: true,
-      message: "OTP sent to email. Please verify.",
-    });
-
-  } catch (error) {
-  console.error("REGISTER ERROR FULL:", {
-    message: error.message,
-    response: error.response?.body || error.response,
-    stack: error.stack,
-  });
-
-  res.status(500).json({
-    success: false,
-    message: "Registration failed",
-    error: error.response?.body || error.message,
-  });
-}
-
+  }
 };
 
 

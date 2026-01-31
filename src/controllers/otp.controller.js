@@ -30,30 +30,25 @@ export const sendOtp = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
   try {
-    const email = req.body.email;
-const otp = String(req.body.otp);
-
+    const { email, otp } = req.body;
 
     const record = await Otp.findOne({ email });
 
-    if (!record) {
-      return res.status(400).json({ message: "OTP not found" });
-    }
+    if (!record) return res.status(400).json({ message: "OTP not found" });
 
-    if (Date.now() > record.expiresAt) {
+    if (Date.now() > record.expiresAt)
       return res.status(400).json({ message: "OTP expired" });
-    }
 
-    const isMatch = await bcrypt.compare(otp, record.otp);
+    const isMatch = await bcrypt.compare(String(otp), record.otp);
 
-    if (!isMatch) {
+    if (!isMatch)
       return res.status(400).json({ message: "Invalid OTP" });
-    }
 
     await Otp.deleteOne({ email });
 
-    res.json({ message: "OTP verified" });
+    // ❌ DO NOT create user here
+    return res.json({ message: "OTP verified" });
   } catch (error) {
-    res.status(500).json({ message: "Failed to verify OTP" });
+    return res.status(500).json({ message: "Failed to verify OTP" });
   }
 };
