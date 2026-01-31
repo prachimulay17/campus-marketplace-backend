@@ -30,7 +30,9 @@ export const sendOtp = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const email = req.body.email;
+const otp = String(req.body.otp);
+
 
     const record = await Otp.findOne({ email });
 
