@@ -1,7 +1,7 @@
 import Otp from "../models/otp.model.js";
 import { generateOtp } from "../utils/generateOtp.js";
 import { sendOtpEmail } from "../utils/sendOtpEmail.js";
-import {User} from "../models/user.model.js";
+import bcrypt from "bcrypt";
 
 export const sendOtp = async (req, res) => {
   try {
@@ -11,14 +11,13 @@ export const sendOtp = async (req, res) => {
       return res.status(400).json({ message: "Email required" });
 
     const otp = generateOtp();
+    const hashedOtp = await bcrypt.hash(otp, 10);
 
-    await Otp.findOneAndDelete({ email });
-
-    await Otp.create({
-      email,
-      otp,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-    });
+    await Otp.findOneAndUpdate(
+      { email },
+      { email, otp: hashedOtp, expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+      { upsert: true }
+    );
 
     await sendOtpEmail(email, otp);
 
@@ -30,18 +29,29 @@ export const sendOtp = async (req, res) => {
 
 
 export const verifyOtp = async (req, res) => {
-  const { email, otp } = req.body;
-console.log("ENTERED OTP:", otp);
-console.log("HASHED OTP:", user.otp);
-  const record = await Otp.findOne({ email, otp });
+  try {
+    const { email, otp } = req.body;
 
-  if (!record)
-    return res.status(400).json({ message: "Invalid OTP" });
+    const record = await Otp.findOne({ email });
 
-  if (record.expiresAt < new Date())
-    return res.status(400).json({ message: "OTP expired" });
+    if (!record) {
+      return res.status(400).json({ message: "OTP not found" });
+    }
 
-  await Otp.deleteOne({ email });
+    if (Date.now() > record.expiresAt) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
 
-  res.json({ message: "OTP verified successfully" });
+    const isMatch = await bcrypt.compare(otp, record.otp);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    await Otp.deleteOne({ email });
+
+    res.json({ message: "OTP verified" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to verify OTP" });
+  }
 };
