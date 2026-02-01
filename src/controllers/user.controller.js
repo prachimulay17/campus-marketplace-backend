@@ -108,12 +108,8 @@ export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email }).select("+password");
-  if (!user.isVerified) {
-  return res.status(401).json({
-    message: "Please verify your email first"
-  });
-}
 
+  // 1. Check if user exists
   if (!user) {
     return res.status(401).json({
       success: false,
@@ -121,6 +117,15 @@ export const loginUser = asyncHandler(async (req, res) => {
     });
   }
 
+  // 2. Check if email is verified
+  if (!user.isVerified) {
+    return res.status(401).json({
+      success: false,
+      message: "Please verify your email first",
+    });
+  }
+
+  // 3. Check password
   const isPasswordValid = await user.isPasswordCorrect(password);
   if (!isPasswordValid) {
     return res.status(401).json({
@@ -129,8 +134,8 @@ export const loginUser = asyncHandler(async (req, res) => {
     });
   }
 
+  // 4. Generate tokens
   const { accessToken, refreshToken } = await generateTokens(user._id);
-
   setCookies(res, accessToken, refreshToken);
 
   const safeUser = await User.findById(user._id).select("-password -refreshToken");
@@ -139,11 +144,10 @@ export const loginUser = asyncHandler(async (req, res) => {
     success: true,
     message: "Login successful",
     token: accessToken,
-    data: {
-      user: safeUser,
-    },
+    data: { user: safeUser },
   });
 });
+
 
 
 // Logout user
