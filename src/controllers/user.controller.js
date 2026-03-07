@@ -1,10 +1,8 @@
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 import { asyncHandler } from "../middlewares/error.middleware.js";
-
-
-
-
+import crypto from "crypto";
+import { sendEmail } from "../utils/sendEmail.js";
 
 // Generate access and refresh tokens
 const generateTokens = async (userId) => {
@@ -296,7 +294,110 @@ export const changePassword = asyncHandler(async (req, res) => {
   });
 });
 
+// Forgot Password
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
 
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      message: "Please provide an email address",
+    });
+  }
 
+  // 1. Find user by email
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user) {
+    // Return a generic message to prevent email enumeration
+    return res.status(200).json({
+      success: true,
+      message: "If an account with that email exists, a password reset link has been sent.",
+    });
+  }
 
+  // 2. Generate random reset token
+  const resetToken = user.createPasswordResetToken();
+  await user.save({ validateBeforeSave: false });
 
+  // 3. Send token to user's email
+  const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password/${resetToken}`;
+
+  const message = `
+    <h1>You requested a password reset</h1>
+    <p>Please go to this link to reset your password:</p>
+    <a href="${resetUrl}" clicktracking="off">${resetUrl}</a>
+    <p>This link is valid for 15 minutes.</p>
+    <p>If you didn't request this, please ignore this email.</p>
+  `;
+
+  try {
+    await sendEmail(user.email, "Password Reset Request", message);
+
+    res.status(200).json({
+      success: true,
+      message: "If an account with that email exists, a password reset link has been sent.",
+    });
+  } catch (error) {
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(500).json({
+      success: false,
+      message: "There was an error sending the email. Try again later!",
+    });
+  }
+});
+
+// Reset Password
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  if (!password || password.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: "Password must be at least 6 characters long",
+    });
+  }
+
+  // 1. Hash the incoming token
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
+  // 2. Find user with that token AND token hasn't expired
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return res.status(400).json({
+      success: false,
+      message: "Token is invalid or has expired",
+    });
+  }
+
+  // 3. Update the password and clear reset token fields
+  user.password = password;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+
+  // The pre-save hook will hash the new password
+  await user.save();
+
+  // 4. Optionally log them in immediately by generating tokens
+  const { accessToken, refreshToken } = await generateTokens(user._id);
+  setCookies(res, accessToken, refreshToken);
+
+  const safeUser = await User.findById(user._id).select("-password -refreshToken");
+
+  res.status(200).json({
+    success: true,
+    message: "Password reset successful",
+    token: accessToken,
+    data: { user: safeUser },
+  });
+});

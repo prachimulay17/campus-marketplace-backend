@@ -7,7 +7,9 @@ import {
   refreshAccessToken,
   getCurrentUser,
   updateUserProfile,
-  changePassword
+  changePassword,
+  forgotPassword,
+  resetPassword
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { handleValidationErrors } from "../middlewares/error.middleware.js";
@@ -77,5 +79,7 @@ router.post("/refresh-token", refreshAccessToken);
 router.get("/me", verifyJWT, getCurrentUser);
 router.patch("/profile", verifyJWT, updateProfileValidation, handleValidationErrors, updateUserProfile);
 router.patch("/change-password", verifyJWT, changePasswordValidation, handleValidationErrors, changePassword);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password/:token", resetPassword);
 
 export default router;
