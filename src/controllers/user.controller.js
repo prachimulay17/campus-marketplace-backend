@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 import { asyncHandler } from "../middlewares/error.middleware.js";
-import bcrypt from "bcrypt";
 
 
 
@@ -27,11 +26,11 @@ const generateTokens = async (userId) => {
 
 // Set secure cookies
 const setCookies = (res, accessToken, refreshToken) => {
- const options = {
-  httpOnly: true,
-  secure: true,        // REQUIRED for HTTPS
-  sameSite: "none",    // REQUIRED for cross-domain
-};
+  const options = {
+    httpOnly: true,
+    secure: true,        // REQUIRED for HTTPS
+    sameSite: "none",    // REQUIRED for cross-domain
+  };
 
 
   res
@@ -51,14 +50,13 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create verified user (OTP already verified)
+    // NOTE: Do NOT manually hash the password here.
+    // The model's pre("save") hook (using bcryptjs) handles hashing automatically.
+    // Double-hashing would make the password impossible to verify.
     const user = await User.create({
       name,
       email,
-      password: hashedPassword,
+      password,
       college,
       isVerified: true,
     });
@@ -107,30 +105,38 @@ export const registerUser = async (req, res) => {
 export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email }).select("+password");
+  console.log("[LOGIN] Request payload:", { email, password: "[HIDDEN]" });
+
+  // Ensure case-insensitive email matching
+  const normalizedEmail = email ? email.toLowerCase() : "";
+  const user = await User.findOne({ email: normalizedEmail }).select("+password");
 
   // 1. Check if user exists
   if (!user) {
-    return res.status(401).json({
+    console.log("[LOGIN] User not found for email:", normalizedEmail);
+    return res.status(404).json({
       success: false,
-      message: "Invalid email or password",
+      message: "Invalid email",
     });
   }
 
   // 2. Check if email is verified
   if (!user.isVerified) {
-    return res.status(401).json({
+    console.log("[LOGIN] Email not verified for:", normalizedEmail);
+    return res.status(403).json({
       success: false,
       message: "Please verify your email first",
     });
   }
 
-  // 3. Check password
+  // 3. Check password using bcryptjs (same library used in model's pre-save hook)
   const isPasswordValid = await user.isPasswordCorrect(password);
+  console.log("[LOGIN] Password valid:", isPasswordValid);
+
   if (!isPasswordValid) {
     return res.status(401).json({
       success: false,
-      message: "Invalid email or password",
+      message: "Invalid password",
     });
   }
 
@@ -139,6 +145,8 @@ export const loginUser = asyncHandler(async (req, res) => {
   setCookies(res, accessToken, refreshToken);
 
   const safeUser = await User.findById(user._id).select("-password -refreshToken");
+
+  console.log("[LOGIN] Login successful for:", normalizedEmail);
 
   res.status(200).json({
     success: true,
@@ -160,11 +168,11 @@ export const logoutUser = asyncHandler(async (req, res) => {
   );
 
   // Clear cookies
- const options = {
-  httpOnly: true,
-  secure: true,        // REQUIRED for HTTPS
-  sameSite: "none",    // REQUIRED for cross-domain
-};
+  const options = {
+    httpOnly: true,
+    secure: true,        // REQUIRED for HTTPS
+    sameSite: "none",    // REQUIRED for cross-domain
+  };
 
 
   res
