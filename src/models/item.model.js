@@ -76,4 +76,10 @@ itemSchema.index({ title: "text", description: "text", tags: "text" });
 // Index for filtering
 itemSchema.index({ category: 1, condition: 1, price: 1, isSold: 1 });
 
+// Index for seller queries
+itemSchema.index({ seller: 1, createdAt: -1 });
+
+// Index for sorting by date
+itemSchema.index({ createdAt: -1 });
+
 export const Item = mongoose.model("Item", itemSchema);

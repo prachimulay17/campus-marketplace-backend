@@ -6,6 +6,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+import compression from "compression";
 import userRouter from "./routes/user.route.js";
 import itemRouter from "./routes/item.route.js";
 import uploadRouter from "./routes/upload.route.js";
@@ -13,6 +14,18 @@ import otpRoutes from "./routes/otp.route.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
+
+const shouldCompress = (req, res) => {
+  if (req.headers['x-no-compression']) return false;
+  return true;
+};
+
+app.use(compression({ filter: shouldCompress }));
+
+app.use("/public", express.static("public", {
+  maxAge: "1d",
+  etag: true,
+}));
 
 // Security middleware
 app.use(helmet({
