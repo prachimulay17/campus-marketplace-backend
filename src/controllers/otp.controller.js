@@ -1,7 +1,7 @@
 import Otp from "../models/otp.model.js";
 import { generateOtp } from "../utils/generateOtp.js";
 import { sendOtpEmail } from "../utils/sendOtpEmail.js";
-import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 export const sendOtp = async (req, res) => {
   try {
@@ -11,7 +11,7 @@ export const sendOtp = async (req, res) => {
       return res.status(400).json({ message: "Email required" });
 
     const otp = generateOtp();
-    const hashedOtp = await bcrypt.hash(otp, 10);
+    const hashedOtp = crypto.createHash("sha256").update(String(otp)).digest("hex");
 
     await Otp.findOneAndUpdate(
       { email },
@@ -24,6 +24,8 @@ export const sendOtp = async (req, res) => {
     res.json({ message: "OTP sent successfully" });
   } catch (error) {
     res.status(500).json({ message: "Failed to send OTP" });
+    console.log("STATUS:", error.response?.status);
+  console.log("DATA:", error.response?.data);
   }
 };
 
@@ -39,7 +41,7 @@ export const verifyOtp = async (req, res) => {
     if (Date.now() > record.expiresAt)
       return res.status(400).json({ message: "OTP expired" });
 
-    const isMatch = await bcrypt.compare(String(otp), record.otp);
+    const isMatch = crypto.createHash("sha256").update(String(otp)).digest("hex") === record.otp;
 
     if (!isMatch)
       return res.status(400).json({ message: "Invalid OTP" });

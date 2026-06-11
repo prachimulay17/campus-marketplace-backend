@@ -16,16 +16,18 @@ console.log("CLOUDINARY ENV CHECK:", {
 });
 
 // Upload file to Cloudinary
-export const uploadToCloudinary = (buffer) => {
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader.upload_stream(
-      { folder: "campus-market" },
-      (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
-      }
-    ).end(buffer);
-  });
+export const uploadToCloudinary = async (localFilePath) => {
+  try {
+    if (!localFilePath) return null;
+    const response = await cloudinary.uploader.upload(localFilePath, {
+      folder: "campus-market"
+    });
+    if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
+    return response;
+  } catch (error) {
+    if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
+    throw error;
+  }
 };
 // Delete file from Cloudinary
 export const deleteFromCloudinary = async (publicId) => {

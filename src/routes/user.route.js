@@ -13,6 +13,7 @@ import {
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { handleValidationErrors } from "../middlewares/error.middleware.js";
+import { loginLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const router = Router();
 
@@ -73,7 +74,7 @@ const changePasswordValidation = [
 
 // Routes
 router.post("/register", registerValidation, handleValidationErrors, registerUser);
-router.post("/login", loginValidation, handleValidationErrors, loginUser);
+router.post("/login", loginLimiter, loginValidation, handleValidationErrors, loginUser);
 router.post("/logout", verifyJWT, logoutUser);
 router.post("/refresh-token", refreshAccessToken);
 router.get("/me", verifyJWT, getCurrentUser);

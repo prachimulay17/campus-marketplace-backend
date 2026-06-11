@@ -78,7 +78,8 @@ export const getAllItems = asyncHandler(async (req, res) => {
     .populate("seller", "name college avatar")
     .sort(sortOptions)
     .skip(skip)
-    .limit(Number(limit));
+    .limit(Number(limit))
+    .lean();
 
   // Get total count for pagination
   const totalItems = await Item.countDocuments(query);
@@ -103,7 +104,7 @@ export const getAllItems = asyncHandler(async (req, res) => {
 export const getItemById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const item = await Item.findById(id).populate("seller", "name college avatar email");
+  const item = await Item.findById(id).populate("seller", "name college avatar");
 
   if (!item) {
     return res.status(404).json({
@@ -207,7 +208,8 @@ export const getItemsBySeller = asyncHandler(async (req, res) => {
     .populate("seller", "name college avatar")
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(Number(limit));
+    .limit(Number(limit))
+    .lean();
 
   const totalItems = await Item.countDocuments({ seller: sellerId });
   const totalPages = Math.ceil(totalItems / Number(limit));
@@ -238,7 +240,8 @@ export const getMyItems = asyncHandler(async (req, res) => {
     .populate("seller", "name college avatar")
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(Number(limit));
+    .limit(Number(limit))
+    .lean();
 
   const totalItems = await Item.countDocuments({ seller: sellerId });
   const totalPages = Math.ceil(totalItems / Number(limit));

@@ -36,6 +36,11 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
 
+    lastSeen: {
+      type: Date,
+      default: Date.now,
+    },
+
     isVerified: {
       type: Boolean,
       default: false

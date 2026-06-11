@@ -66,7 +66,9 @@ export const registerUser = async (req, res) => {
     setCookies(res, accessToken, refreshToken);
 
     // Return safe user data
-    const safeUser = await User.findById(user._id).select("-password -refreshToken");
+    const safeUser = user.toObject();
+    delete safeUser.password;
+    delete safeUser.refreshToken;
 
     res.status(201).json({
       success: true,
@@ -142,7 +144,9 @@ export const loginUser = asyncHandler(async (req, res) => {
   const { accessToken, refreshToken } = await generateTokens(user._id);
   setCookies(res, accessToken, refreshToken);
 
-  const safeUser = await User.findById(user._id).select("-password -refreshToken");
+  const safeUser = user.toObject();
+  delete safeUser.password;
+  delete safeUser.refreshToken;
 
   console.log("[LOGIN] Login successful for:", normalizedEmail);
 
@@ -392,7 +396,9 @@ export const resetPassword = asyncHandler(async (req, res) => {
   const { accessToken, refreshToken } = await generateTokens(user._id);
   setCookies(res, accessToken, refreshToken);
 
-  const safeUser = await User.findById(user._id).select("-password -refreshToken");
+  const safeUser = user.toObject();
+  delete safeUser.password;
+  delete safeUser.refreshToken;
 
   res.status(200).json({
     success: true,

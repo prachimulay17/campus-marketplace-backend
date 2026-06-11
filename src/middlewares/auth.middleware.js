@@ -48,18 +48,8 @@ export const verifyJWT = async (req, res, next) => {
     // Verify the token
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-    // Get user from database (excluding password)
-    const user = await User.findById(decodedToken.id).select("-password");
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid access token",
-      });
-    }
-
-    // Attach user to request object
-    req.user = user;
+    // Attach user to request object directly without hitting the DB
+    req.user = { _id: decodedToken.id };
     next();
   } catch (error) {
     return res.status(401).json({
@@ -118,11 +108,7 @@ export const optionalAuth = async (req, res, next) => {
 
     if (token) {
       const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-      const user = await User.findById(decodedToken.id).select("-password");
-
-      if (user) {
-        req.user = user;
-      }
+      req.user = { _id: decodedToken.id };
     }
 
     next();

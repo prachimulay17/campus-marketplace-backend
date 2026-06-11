@@ -1,7 +1,15 @@
 import multer from "multer";
+import os from "os";
 
-// Use memory storage for Cloudinary
-const storage = multer.memoryStorage();
+// Use disk storage to prevent OOM
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, os.tmpdir());
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  }
+});
 
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image/")) {

@@ -7,11 +7,15 @@ import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import compression from "compression";
+import mongoSanitize from "express-mongo-sanitize";
+import { globalLimiter } from "./middlewares/rateLimit.middleware.js";
 import userRouter from "./routes/user.route.js";
 import itemRouter from "./routes/item.route.js";
 import uploadRouter from "./routes/upload.route.js";
 import otpRoutes from "./routes/otp.route.js";
+import chatRoutes from "./routes/chat.route.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
+import { setupSwagger } from "./config/swagger.config.js";
 
 const app = express();
 
@@ -32,6 +36,12 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
+// Apply global rate limiting
+app.use(globalLimiter);
+
+// Prevent NoSQL injection
+app.use(mongoSanitize());
+console.log("CLIENT_URL =", process.env.CLIENT_URL);
 // CORS configuration
 app.use(cors({
   origin: process.env.CLIENT_URL,
@@ -62,11 +72,15 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Setup Swagger Documentation
+setupSwagger(app);
+
 // API routes
 app.use("/api/auth", userRouter);
 app.use("/api/items", itemRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/otp", otpRoutes);
+app.use("/api/chat", chatRoutes);
 
 
 // 404 handler for undefined routes

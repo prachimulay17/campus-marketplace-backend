@@ -25,7 +25,7 @@ console.log("BUFFER EXISTS:", !!req.files[0].buffer);
 
   try {
     const uploadPromises = req.files.map(file =>
-  uploadToCloudinary(file.buffer)
+  uploadToCloudinary(file.path)
 );
 
     const uploadResults = await Promise.all(uploadPromises);
