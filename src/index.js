@@ -16,8 +16,5 @@ server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-console.log("ENV CHECK ENTRY:", {
-  cloud: process.env.CLOUDINARY_CLOUD_NAME,
-  key: process.env.CLOUDINARY_API_KEY,
-});
+
 

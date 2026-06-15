@@ -81,6 +81,24 @@ export const getAllItems = asyncHandler(async (req, res) => {
     .limit(Number(limit))
     .lean();
 
+  // Add wishlist status if user is authenticated
+  const userId = req.user?._id;
+  if (userId) {
+    items.forEach(item => {
+      item.isWishlisted = item.wishlistedBy?.some(id => id.toString() === userId.toString()) || false;
+      item.wishlistCount = item.wishlistedBy?.length || 0;
+      // Remove wishlistedBy array from response for privacy
+      delete item.wishlistedBy;
+    });
+  } else {
+    items.forEach(item => {
+      item.isWishlisted = false;
+      item.wishlistCount = item.wishlistedBy?.length || 0;
+      // Remove wishlistedBy array from response for privacy
+      delete item.wishlistedBy;
+    });
+  }
+
   // Get total count for pagination
   const totalItems = await Item.countDocuments(query);
   const totalPages = Math.ceil(totalItems / Number(limit));
@@ -103,8 +121,9 @@ export const getAllItems = asyncHandler(async (req, res) => {
 // Get single item by ID
 export const getItemById = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const userId = req.user?._id;
 
-  const item = await Item.findById(id).populate("seller", "name college avatar");
+  const item = await Item.findById(id).populate("seller", "name college avatar").lean();
 
   if (!item) {
     return res.status(404).json({
@@ -112,6 +131,17 @@ export const getItemById = asyncHandler(async (req, res) => {
       message: "Item not found",
     });
   }
+
+  // Add wishlist information
+  if (userId) {
+    item.isWishlisted = item.wishlistedBy?.some(id => id.toString() === userId.toString()) || false;
+  } else {
+    item.isWishlisted = false;
+  }
+  
+  item.wishlistCount = item.wishlistedBy?.length || 0;
+  // Remove wishlistedBy array from response for privacy
+  delete item.wishlistedBy;
 
   res.status(200).json({
     success: true,
@@ -244,6 +274,97 @@ export const getMyItems = asyncHandler(async (req, res) => {
     .lean();
 
   const totalItems = await Item.countDocuments({ seller: sellerId });
+  const totalPages = Math.ceil(totalItems / Number(limit));
+
+  res.status(200).json({
+    success: true,
+    data: {
+      items,
+      pagination: {
+        currentPage: Number(page),
+        totalPages,
+        totalItems,
+        hasNextPage: Number(page) < totalPages,
+        hasPrevPage: Number(page) > 1,
+      },
+    },
+  });
+});
+
+// Toggle wishlist status for an item
+export const toggleWishlist = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+
+  const item = await Item.findById(id);
+
+  if (!item) {
+    return res.status(404).json({
+      success: false,
+      message: "Item not found",
+    });
+  }
+
+  // Check if user is trying to wishlist their own item
+  if (item.seller.toString() === userId.toString()) {
+    return res.status(400).json({
+      success: false,
+      message: "You cannot wishlist your own item",
+    });
+  }
+
+  // Check if item is already wishlisted by user
+  const isWishlisted = item.wishlistedBy.includes(userId);
+
+  if (isWishlisted) {
+    // Remove from wishlist
+    item.wishlistedBy.pull(userId);
+  } else {
+    // Add to wishlist
+    item.wishlistedBy.push(userId);
+  }
+
+  await item.save();
+
+  res.status(200).json({
+    success: true,
+    message: isWishlisted ? "Item removed from wishlist" : "Item added to wishlist",
+    data: {
+      isWishlisted: !isWishlisted,
+      wishlistCount: item.wishlistedBy.length,
+    },
+  });
+});
+
+// Get user's wishlisted items
+export const getWishlistedItems = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { page = 1, limit = 12 } = req.query;
+
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const items = await Item.find({ 
+    wishlistedBy: userId,
+    isSold: false // Only show items that are still available
+  })
+    .populate("seller", "name college avatar")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(Number(limit))
+    .lean();
+
+  // Add wishlist information (these items are from user's wishlist, so they're all wishlisted)
+  items.forEach(item => {
+    item.isWishlisted = true; // All items from wishlist are wishlisted by definition
+    item.wishlistCount = item.wishlistedBy?.length || 0;
+    // Remove wishlistedBy array from response for privacy
+    delete item.wishlistedBy;
+  });
+
+  const totalItems = await Item.countDocuments({ 
+    wishlistedBy: userId,
+    isSold: false 
+  });
   const totalPages = Math.ceil(totalItems / Number(limit));
 
   res.status(200).json({

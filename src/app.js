@@ -41,7 +41,6 @@ app.use(globalLimiter);
 
 // Prevent NoSQL injection
 app.use(mongoSanitize());
-console.log("CLIENT_URL =", process.env.CLIENT_URL);
 // CORS configuration
 app.use(cors({
   origin: process.env.CLIENT_URL,

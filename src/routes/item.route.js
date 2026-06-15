@@ -9,8 +9,10 @@ import {
   markItemAsSold,
   getItemsBySeller,
   getMyItems,
+  toggleWishlist,
+  getWishlistedItems,
 } from "../controllers/item.controller.js";
-import { verifyJWT, isOwner } from "../middlewares/auth.middleware.js";
+import { verifyJWT, isOwner, optionalAuth } from "../middlewares/auth.middleware.js";
 import { handleValidationErrors } from "../middlewares/error.middleware.js";
 
 const router = Router();
@@ -94,15 +96,17 @@ const updateItemValidation = [
 ];
 
 // Routes
-// Public routes
-router.get("/", getAllItems);
-router.get("/:id", getItemById);
+// Public routes (with optional auth for wishlist info)
+router.get("/", optionalAuth, getAllItems);
+router.get("/:id", optionalAuth, getItemById);
 router.get("/seller/:sellerId", getItemsBySeller);
 
 // Protected routes (require authentication)
 router.use(verifyJWT); // All routes below require authentication
 
 router.get("/user/my-items", getMyItems);
+router.get("/user/wishlist", getWishlistedItems);
+router.post("/:id/wishlist", toggleWishlist);
 router.post("/", createItemValidation, handleValidationErrors, createItem);
 router.patch("/:id", isOwner("Item"), updateItemValidation, handleValidationErrors, updateItem);
 router.delete("/:id", isOwner("Item"), deleteItem);

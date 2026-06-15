@@ -104,7 +104,16 @@ export const isOwner = (modelName) => {
 // Optional authentication middleware (doesn't fail if no token)
 export const optionalAuth = async (req, res, next) => {
   try {
-    const token = req.cookies?.accessToken;
+    // Get token from cookies OR Authorization header
+    let token = req.cookies?.accessToken;
+    
+    // Check Authorization header if no cookie token
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
 
     if (token) {
       const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);

@@ -66,6 +66,11 @@ const itemSchema = new mongoose.Schema(
       type: String,
       trim: true,
     }],
+
+    wishlistedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    }],
   },
   { timestamps: true }
 );
