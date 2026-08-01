@@ -6,19 +6,27 @@ export default function registerChatHandlers(socket, io) {
   // Typing indicators (ephemeral, no DB)
   //
   socket.on("typing_start", ({ conversationId }) => {
-    if (!conversationId || !socket.userId) return;
-    socket.to(`conv_${conversationId}`).emit("user_typing", {
-      conversationId,
-      userId: socket.userId,
-    });
+    try {
+      if (!conversationId || !socket.userId) return;
+      socket.to(`conv_${conversationId}`).emit("user_typing", {
+        conversationId,
+        userId: socket.userId,
+      });
+    } catch (error) {
+      console.error("[chatHandler] typing_start error:", error);
+    }
   });
 
   socket.on("typing_end", ({ conversationId }) => {
-    if (!conversationId || !socket.userId) return;
-    socket.to(`conv_${conversationId}`).emit("user_stopped_typing", {
-      conversationId,
-      userId: socket.userId,
-    });
+    try {
+      if (!conversationId || !socket.userId) return;
+      socket.to(`conv_${conversationId}`).emit("user_stopped_typing", {
+        conversationId,
+        userId: socket.userId,
+      });
+    } catch (error) {
+      console.error("[chatHandler] typing_end error:", error);
+    }
   });
 
   //
@@ -93,7 +101,7 @@ export default function registerChatHandlers(socket, io) {
         data: { ...populatedMessage, status: "delivered" },
       });
     } catch (error) {
-      console.error("[chatHandler] sendMessage error:", error);
+      console.error("[chatHandler] sendMessage database operation failed:", error);
       callback?.({ success: false, error: "Internal server error" });
     }
   });
@@ -151,7 +159,7 @@ export default function registerChatHandlers(socket, io) {
 
       callback?.({ success: true, data: { updated: result.modifiedCount } });
     } catch (error) {
-      console.error("[chatHandler] markMessagesSeen error:", error);
+      console.error("[chatHandler] markMessagesSeen database operation failed:", error);
       callback?.({ success: false, error: "Internal server error" });
     }
   });

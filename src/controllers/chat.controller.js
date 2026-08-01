@@ -18,13 +18,26 @@ export const createConversation = async (req, res) => {
   const item = await Item.findById(itemId);
   if (!item) return res.status(404).json({ success: false, message: "Item not found" });
 
-  // Prevent duplicate conversations between same buyer, seller, and item
+  // Find conversation between same buyer, seller, and item (including hidden ones)
   let conversation = await Conversation.findOne({
     participants: { $all: [buyerId, sellerId] },
     item: itemId
   });
 
-  if (!conversation) {
+  if (conversation) {
+    // If conversation exists but is hidden for the current user, unhide it
+    const isHiddenForBuyer = conversation.hiddenFor.some(
+      (h) => h.toString() === buyerId.toString()
+    );
+    
+    if (isHiddenForBuyer) {
+      conversation.hiddenFor = conversation.hiddenFor.filter(
+        (h) => h.toString() !== buyerId.toString()
+      );
+      await conversation.save();
+    }
+  } else {
+    // Create new conversation if none exists
     conversation = await Conversation.create({
       participants: [buyerId, sellerId],
       item: itemId,
