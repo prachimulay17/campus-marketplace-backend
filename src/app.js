@@ -18,6 +18,7 @@ import { errorHandler } from "./middlewares/error.middleware.js";
 import { setupSwagger } from "./config/swagger.config.js";
 
 const app = express();
+app.set("trust proxy", 1);
 
 const shouldCompress = (req, res) => {
   if (req.headers['x-no-compression']) return false;
