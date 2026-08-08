@@ -8,7 +8,7 @@
  * Usage: node src/db/migrate-drop-stale-indexes.js
  */
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: ".env.development" });
 
 import mongoose from "mongoose";
 

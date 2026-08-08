@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: ".env.development" });
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 
